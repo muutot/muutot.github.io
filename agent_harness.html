@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Harness：智能体驾驭系统——2026 AI工程新范式</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-light: #eff6ff;
+            --text-main: #1f2937;
+            --text-muted: #4b5563;
+            --bg-main: #f9fafb;
+            --bg-card: #ffffff;
+            --border: #e5e7eb;
+            --accent: #0d9488;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: var(--text-main);
+            background-color: var(--bg-main);
+            line-height: 1.7;
+            padding-top: 60px;
+        }
+
+        /* 顶部进度条 */
+        .progress-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: #e5e7eb;
+            z-index: 1000;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+        }
+
+        /* 导航栏 */
+        header {
+            position: fixed;
+            top: 4px;
+            left: 0;
+            width: 100%;
+            height: 56px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            z-index: 999;
+        }
+
+        .logo {
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: var(--primary);
+        }
+
+        .meta-tag {
+            background: var(--primary-light);
+            color: var(--primary);
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        /* 主体布局 */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 2.5rem;
+            padding: 2rem;
+        }
+
+        /* 侧边导览 */
+        aside {
+            position: sticky;
+            top: 90px;
+            height: calc(100vh - 120px);
+            overflow-y: auto;
+        }
+
+        .toc-title {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .toc-list {
+            list-style: none;
+        }
+
+        .toc-item a {
+            display: block;
+            padding: 0.5rem 0.75rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-left: 2px solid transparent;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+
+        .toc-item a:hover {
+            color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        /* 文章主体 */
+        main {
+            background: var(--bg-card);
+            padding: 3rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            line-height: 1.3;
+            margin-bottom: 1.5rem;
+            color: #111827;
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            margin-top: 2.5rem;
+            margin-bottom: 1.25rem;
+            color: #111827;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+
+        h3 {
+            font-size: 1.2rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: #374151;
+        }
+
+        p {
+            margin-bottom: 1.25rem;
+            color: var(--text-main);
+        }
+
+        strong {
+            color: #111827;
+        }
+
+        /* 亮点金句卡片 */
+        blockquote {
+            background: var(--primary-light);
+            border-left: 4px solid var(--primary);
+            padding: 1.25rem 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+            font-style: italic;
+        }
+
+        blockquote p {
+            margin-bottom: 0;
+            color: #1e40af;
+            font-weight: 500;
+        }
+
+        /* 核心数字看板 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .stat-card {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-num {
+            font-size: 2.25rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        /* 12组件列表布局 */
+        .component-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .component-card {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .component-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+        }
+
+        .component-title {
+            display: flex;
+            align-items: center;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 0.75rem;
+        }
+
+        .component-title span {
+            background: #f0fdfa;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            margin-right: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        /* 演进表格 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+        }
+
+        th, td {
+            border: 1px solid var(--border);
+            padding: 0.75rem 1rem;
+            text-align: left;
+        }
+
+        th {
+            background: #f3f4f6;
+            font-weight: 600;
+        }
+
+        /* 响应式适配 */
+        @media (max-width: 968px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            aside {
+                display: none;
+            }
+            main {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="progress-container">
+        <div class="progress-bar" id="myBar"></div>
+    </div>
+
+    <header>
+        <div class="logo">Agent Harness 演讲演示</div>
+        <div class="meta-tag">2026春季前沿科技分享</div>
+    </header>
+
+    <div class="container">
+        <!-- 侧边大纲 -->
+        <aside>
+            <div class="toc-title">内容大纲</div>
+            <ul class="toc-list">
+                <li class="toc-item"><a href="#intro">引言：点燃讨论的数字</a></li>
+                <li class="toc-item"><a href="#what-is">一、Harness 是什么？</a></li>
+                <li class="toc-item"><a href="#core-12">二、生产级 Harness 12个核心组件</a></li>
+                <li class="toc-item"><a href="#decisions">三、七个关键设计决策</a></li>
+                <li class="toc-item"><a href="#debate">四、社区的核心争论</a></li>
+                <li class="toc-item"><a href="#conclusion">五、结论：Harness 就是产品</a></li>
+            </ul>
+        </aside>
+
+        <!-- 主体内容 -->
+        <main>
+            <h1 id="intro">Agent Harness：智能体驾驭系统</h1>
+            <p style="font-size: 1.15rem; color: var(--text-muted); margin-bottom: 2rem;">—— 深刻改变 AI 工程面貌的隐形基础设施</p>
+
+            <p>今天我想和大家聊一个正在深刻改变 AI 工程面貌的概念——<strong>Agent Harness</strong>，中文可以叫<strong>"智能体驾驭系统"</strong>。</p>
+            <p>2026 年春天，这个词突然火了起来。但真正点燃讨论的，是一组让人坐不住的数字：</p>
+
+            <!-- 数据看板 -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-num">66.5%</div>
+                    <div class="stat-label">TerminalBench 通过率<br>(仅更换Harness，从52.8%跃升)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-num">76.4%</div>
+                    <div class="stat-label">MIT/Stanford 自动优化通过率<br>(超越所有人设方案)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-num">100万+</div>
+                    <div class="stat-label">完全由 AI 构建的代码行数<br>(OpenAI 实验：3工程师/5个月)</div>
+                </div>
+            </div>
+
+            <p>这些案例指向同一个发现：<strong>当模型能力跨过某个阈值后，限制因素不再是模型本身，而是包裹在模型外的那层基础设施。</strong></p>
+
+            <h2 id="what-is">一、Harness 是什么？</h2>
+            <p>简单说，Harness 就是大模型之外的全部工程化基础设施。</p>
+            <blockquote>
+                <p>“如果你不是模型，你就是 Harness。” —— LangChain 工程师 Vivek Trivedi</p>
+            </blockquote>
+            <p>从系统提示词、工具调用到状态管理、安全沙箱，所有模型之外的代码、配置与执行逻辑，都属于 Harness 的范畴。我们可以用建筑行业的<strong>脚手架（Scaffolding）</strong>来理解它：没有它，工人无法到达上层楼层；有了它，工人可以触及原本够不到的高度。最关键的是，建筑完工时脚手架会被拆除。</p>
+
+            <h3>工程层次的演进历程</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>发展阶段</th>
+                        <th>核心工程范式</th>
+                        <th>关注焦点</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>2022 - 2024</td>
+                        <td><strong>Prompt Engineering</strong></td>
+                        <td>关注“怎么说” —— 如何与模型对话</td>
+                    </tr>
+                    <tr>
+                        <td>2025</td>
+                        <td><strong>Context Engineering</strong></td>
+                        <td>关注“看什么” —— 系统地管理记忆和状态</td>
+                    </tr>
+                    <tr>
+                        <td>2026</td>
+                        <td><strong>Harness Engineering</strong></td>
+                        <td>关注“怎么控” —— 围绕模型的完整系统设计</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="core-12">二、生产级 Harness 的十二个核心组件</h2>
+            <p>综合 Anthropic、OpenAI、LangChain 等前沿社区的实践，一个生产级 Harness 包含以下 12 个独立组件：</p>
+
+            <div class="component-grid">
+                <div class="component-card">
+                    <div class="component-title"><span>1</span> 编排循环 —— Agent 的心跳</div>
+                    <p>管理轮次，处理工具调用失败、检测死循环并响应安全边界。如 Anthropic 开发的 "Ralph Loop" 模式，通过文件系统提供跨上下文窗口的连续性。</p>
+                </div>
+                <div class="component-card">
+                    <div class="component-title"><span>2</span> 工具系统 —— Agent 的双手</div>
+                    <p>生产实践揭示了一个反直觉的原则：<strong>更多工具通常意味着更差的性能</strong>。工具过多会导致选择困惑。安全上须采用操作系统级沙箱（如 Linux 的 bwrap）进行进程隔离。</p>
+                </div>
+                <div class="component-card">
+                    <div class="component-title"><span>3</span> 记忆系统 —— 跨越时间的状态保持</div>
+                    <p>建立三层记忆架构：上下文内记忆（最快但最脆）、外部文件记忆（memory.md 指针索引）和项目级静态记忆（CLAUDE.md）。核心原则是：Agent 不信任自己的记忆，行动前需验证。</p>
+                </div>
+                <div class="component-card">
+                    <div class="component-title"><span>4</span> 上下文管理 —— 在噪音中找到信号</div>
+                    <p>应对“上下文腐烂”问题（关键内容在中间时性能下降超30%）。通常采用快速剪枝、微压缩、渐进坍塌、自动压缩和反应式压缩五种策略。</p>
+                </div>
+                <div class="component-card">
+                    <div class="component-title"><span>5</span> Prompt 构建 —— 模型实际看到的世界</div>
+                    <p>告别“泥球架构”，采用多层组装模型（基础人格层、角色指令层、工具定义层、上下文注入层、动态规则层），配合严格的优先级栈防止提示词注入。</p>
+                </div>
+                <div class="component-card">
+                    <div class="component-title"><span>6</span> 输出解析 —— 从自由文本到结构化行动</div>
+                    <p>演进至第三代：<strong>Grammar-Constrained Decoding（语法约束解码）</strong>。通过在生成时数学化限制 Token 概率，实现接近 100% 的 Schema 合规率。</p>
+                </div>
+                <div class="component-card">
+                    <div class="component-title"><span>7</span> 状态管理 —— 让任务可恢复、可调试</div>
+                    <p>将状态建模为可溯源的流。具备“时间旅行调试（Time-Travel Debugging）”能力与“中断后恢复”能力，或像 Claude Code 一样利用 Git 提交天然作为检查点。</p>
+                </div>
+                <div class="component-card">
+                    <div class="component-title"><span>8</span> 错误处理 —— 在必然的错误中生存</div>
+                    <p>在长流程中错误是必然的。系统需要区分瞬态错误、LLM可恢复错误、用户可修复错误和意外错误。绝不因为单个工具调用失败而终止循环，而是包装为模型可理解的格式返回。</p>
+                </div>
+                <div class="component-card">
+                    <div class="component-title"><span>9</span> 安全防护 —— 速度与安全之间的永恒张力</div>
+                    <p>构建输入防护（Tripwire 熔断）、工具防护（参数验证）与输出防护（PII检测）三层体系。或采用 Stripe 的“宽容模式”——在完全隔离的沙箱环境里给 Agent 最大自由。</p>
+                </div>
+                <div class="component-card">
+                    <div class="component-title"><span>10</span> 验证循环 —— 从 Demo 到生产的分水岭</div>
+                    <p>包含三种互补验证：基于规则的反馈（测试套件/Linter）、视觉反馈（Playwright 截图验证 UI）以及 LLM-as-Judge（子 Agent 评估）。</p>
+                </div>
+                <div class="component-card">
+                    <div class="component-title"><span>11</span> 子智能体编排 —— 并行化的艺术</div>
+                    <p>任务过载时支持 Fork（上下文副本）、Teammate（面板协作）或 Worktree（独立分支）三种执行模型。或采用 Handoffs（交接模式）与 Agents-as-Tools（工具模式）。</p>
+                </div>
+                <div class="component-card">
+                    <div class="component-title"><span>12</span> 终止条件 —— 知道何时停下</div>
+                    <p>实现分层终止：自然终止、轮次限制、Token预算耗尽、安全拒绝等。解决 Agent 在核心任务完成后仍无限循环、无效重构代码的“完成问题”。</p>
+                </div>
+            </div>
+
+            <h2 id="decisions">三、七个关键设计决策</h2>
+            <p>每个 Harness 架构师在面对复杂系统时，必须做出的七个抉择：</p>
+            <p>
+                1. <strong>单 Agent 还是多 Agent：</strong> 优先榨干单 Agent 能力，工具超过 10 个或领域完全分离时再考虑拆分。<br>
+                2. <strong>ReAct 还是 Plan-and-Execute：</strong> 前者灵活应对高确定性任务，后者能带来数倍的速度提升。<br>
+                3. <strong>上下文窗口管理策略：</strong> 优先保留推理痕迹而非原始工具输出，能在保持准确率的同时减少 26%~54% 的 Token 消耗。<br>
+                4. <strong>验证循环设计：</strong> 结合计算验证（提供确定性真相）与推理验证（捕捉语义问题）。<br>
+                5. <strong>权限与安全架构：</strong> 在极限制约模式（安全缓慢）与完全沙箱化宽容模式（快速高效）中寻找平衡。<br>
+                6. <strong>工具范围策略：</strong> 严格奉行最小暴露原则，只赋予当前步骤所需的最小工具集。<br>
+                7. <strong>Harness 厚度：</strong> 2026年最大的架构押注。你更倾向于把控制权给明式图框架（厚 Harness），还是寄希望于模型的飞速迭代（薄 Harness）？
+            </p>
+
+            <h2 id="debate">四、社区的核心争论</h2>
+            <p>关于 Harness 的“厚度”，社区至今分成明显的两派：</p>
+            <p><strong>模型派</strong> 认为 Harness 被过度炒作了。Claude Code 创造者 Boris Cherny 坦言：“所有秘诀都在模型本身，它只是模型上最薄的一层包装。” OpenAI 的 Noam Brown 也指出，在新模型面前，大费周章搭建的复杂编排逻辑很容易变成明天的绊脚石。</p>
+            <p><strong>Harness 派</strong> 则坚信基础设施决定了上限。LangChain 的 Jerry Liu 认为，AI 价值的真正障碍在于用户工程化工作流的能力。TerminalBench 同模型不同排名（相差25位）的铁证，就是 Harness 决定性差距的最好体现。</p>
+            <blockquote>
+                <p>Latent Space 社区提出了精妙的“脚手架原则”：<strong>为移除而构建</strong>。Harness 的最终设计目标，应当是随着模型自身能力的飞跃，而主动降低其自身的复杂性。</p>
+            </blockquote>
+
+            <h2 id="conclusion">五、结论</h2>
+            <p>Agent Harness 概念的爆发标志着 AI 工程领域的一个关键拐点。大家终于认识到：<strong>当模型跨过能力阈值后，真正的工程挑战不在于让模型更聪明，而在于更有效地引导和约束模型的能力。</strong></p>
+            <p><strong>Harness 就是产品。</strong></p>
+            <p>2026 年的 AI 工程竞赛不在模型层，因为各家公司的模型底座正在快速收敛；真正的竞赛在 Harness 层——谁能够设计出最优雅、最可靠、最可扩展的基础设施，来将模型的原始智能转化为可信赖的生产力。</p>
+            <p>下次你的 Agent 失败时，不要责怪模型，先去检查你的 Harness。谢谢大家。</p>
+        </main>
+    </div>
+
+    <script>
+        // 顶部滚动条进度逻辑
+        window.onscroll = function() { myFunction() };
+
+        function myFunction() {
+            var winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            var height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            var scrolled = (winScroll / height) * 100;
+            document.getElementById("myBar").style.width = scrolled + "%";
+        }
+    </script>
+</body>
+</html>
