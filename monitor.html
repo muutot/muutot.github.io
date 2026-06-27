@@ -1097,7 +1097,11 @@
 <div class="modal-overlay" id="export-modal">
   <div class="modal-box">
     <h2>导出数据</h2>
-    <p class="subtitle">选择导出格式</p>
+    <p class="subtitle">选择日期范围和导出格式</p>
+    <label>开始日期</label>
+    <input type="date" id="export-start" style="width:100%;padding:8px;background:#2a2a2a;color:#e0e0e0;border:1px solid #444;border-radius:5px;box-sizing:border-box;">
+    <label style="margin-top:8px;">结束日期</label>
+    <input type="date" id="export-end" style="width:100%;padding:8px;background:#2a2a2a;color:#e0e0e0;border:1px solid #444;border-radius:5px;box-sizing:border-box;">
     <label>格式</label>
     <div class="mode-group">
       <label><input type="radio" name="export-format" value="nested" checked> 嵌套</label>
@@ -1110,9 +1114,28 @@
   </div>
 </div>
 
+<div id="loading-overlay">
+  <div id="loading-box">
+    <p>查询历史数据中…</p>
+    <div id="loading-bar-track"><div id="loading-bar-fill"></div></div>
+  </div>
+</div>
+
 <script>
-  const API_URL = 'http://127.0.0.1:5000';
+  // API_URL: prefer an explicit ?api=... query parameter, fall back to the
+  // origin of the page itself (the backend serves index.html on the same
+  // port), and finally to the legacy 127.0.0.1:5000 default.
+  const API_URL = (() => {
+    const params = new URLSearchParams(window.location.search);
+    const fromQuery = params.get('api');
+    if (fromQuery) return fromQuery.replace(/\/+$/, '');
+    if (window.location.protocol && window.location.host) {
+      return window.location.origin;
+    }
+    return 'http://127.0.0.1:5000';
+  })();
   let eventSource = null;
+  let reconnectAttempts = 0;
   let reconnectTimer = null;
   let lastLiveData = {};
   let isHistory = false;
@@ -1189,6 +1212,7 @@
 
   function updateTopN(data) {
     const sortedKeys = Object.entries(data)
+      .filter(([, count]) => count > 0)
       .map(([key, count]) => ({ key, count }))
       .sort((a, b) => b.count - a.count);
 
@@ -1210,7 +1234,12 @@
 
 
   /**
-   * Handles incoming live data from SSE and updates only the keys that have changed.
+   * Handles incoming live data from SSE.
+   *
+   * currentData may be a full snapshot (first event after subscribe /
+   * reconnect) or a partial delta (subsequent events).  When it is a
+   * delta, only the keys present in the object have changed; missing
+   * keys must keep their previous value.
    */
   function handleLiveData(currentData) {
     let animate = Object.keys(lastLiveData).length > 0;
@@ -1218,20 +1247,19 @@
       isHistory = false;
       animate = false;
     }
-    const allKeys = new Set([...Object.keys(lastLiveData), ...Object.keys(currentData)]);
     let hadChange = false;
-    allKeys.forEach(key => {
+    for (const key of Object.keys(currentData)) {
       const oldValue = lastLiveData[key] || 0;
-      const newValue = currentData[key] || 0;
+      const newValue = currentData[key];
       if (oldValue !== newValue) {
         updateElement(key, newValue, animate);
         hadChange = true;
       }
-    });
+      lastLiveData[key] = newValue;
+    }
 
     if (hadChange) {
-      updateTopN(currentData);
-      lastLiveData = currentData;
+      updateTopN(lastLiveData);
     }
   }
 
@@ -1294,6 +1322,7 @@
     eventSource = new EventSource(`${API_URL}/events`);
 
     eventSource.onopen = function() {
+      reconnectAttempts = 0;
       statusDisplay.textContent = '当前模式: 实时数据';
     };
 
@@ -1307,14 +1336,18 @@
     };
 
     eventSource.onerror = function() {
-      statusDisplay.textContent = '连接断开, 正在自动重连...';
       eventSource.close();
       eventSource = null;
+      reconnectAttempts += 1;
+      // Exponential backoff with jitter, capped at 30s.
+      const baseDelay = Math.min(30000, 1000 * Math.pow(2, Math.min(reconnectAttempts - 1, 5)));
+      const delay = baseDelay + Math.floor(Math.random() * 500);
+      statusDisplay.textContent = `连接断开, ${Math.round(delay / 1000)}s 后重连 (尝试 ${reconnectAttempts})`;
       if (reconnectTimer) clearTimeout(reconnectTimer);
       reconnectTimer = setTimeout(() => {
         reconnectTimer = null;
         connectSSE();
-      }, 3000);
+      }, delay);
     };
   }
 
@@ -1340,6 +1373,7 @@
       eventSource.close();
       eventSource = null;
     }
+    reconnectAttempts = 0;
   }
 
   /**
@@ -1434,8 +1468,17 @@
   const exportOverlay = document.getElementById('export-modal');
   const exportConfirm = document.getElementById('export-confirm');
   const exportCancel = document.getElementById('export-cancel');
+  const exportStart = document.getElementById('export-start');
+  const exportEnd = document.getElementById('export-end');
+
+  const exportLoadingOverlay = document.getElementById('loading-overlay');
+  const exportLoadingFill = document.getElementById('loading-bar-fill');
+  const exportLoadingText = document.querySelector('#loading-box p');
 
   document.getElementById('export-btn').addEventListener('click', () => {
+    const today = new Date().toISOString().split('T')[0];
+    exportStart.value = startDateInput.value || today;
+    exportEnd.value = endDateInput.value || today;
     exportOverlay.classList.add('active');
   });
 
@@ -1449,37 +1492,64 @@
 
   exportConfirm.addEventListener('click', async () => {
     const fmt = document.querySelector('input[name="export-format"]:checked').value;
+    const start = exportStart.value;
+    const end = exportEnd.value;
     exportConfirm.disabled = true;
+    exportOverlay.classList.remove('active');
+
+    // Show progress overlay
+    exportLoadingText.textContent = '正在导出数据…';
+    exportLoadingFill.style.width = '0%';
+    exportLoadingOverlay.classList.add('show');
+
+    // Reactive progress via SSE
+    const es = new EventSource(`${API_URL}/api/export/progress/stream`);
+    es.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.idle) return;
+        const pct = data.total > 0 ? Math.min(95, Math.round(data.current / data.total * 100)) : 0;
+        exportLoadingFill.style.width = pct + '%';
+        if (data.current > 0) {
+          exportLoadingText.textContent = `正在导出数据… ${data.current}/${data.total}`;
+        }
+        if (data.done) {
+          exportLoadingFill.style.width = '100%';
+          es.close();
+        }
+      } catch (_) {}
+    };
+    es.onerror = () => { es.close(); };
+
     try {
-      const response = await fetch(`${API_URL}/api/export?format=${fmt}`);
+      let url = `${API_URL}/api/export?format=${fmt}&pretty=true&_=${Date.now()}`;
+      if (start) url += `&start=${start}`;
+      if (end) url += `&end=${end}`;
+      const response = await fetch(url);
+      es.close();
       if (!response.ok) throw new Error('Export failed');
+      exportLoadingFill.style.width = '100%';
       const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
+      const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
+      a.href = blobUrl;
       a.download = `keymonitor-export-${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      exportOverlay.classList.remove('active');
+      URL.revokeObjectURL(blobUrl);
     } catch (e) {
+      es.close();
       alert('导出失败: ' + e.message);
     } finally {
       exportConfirm.disabled = false;
+      setTimeout(() => { exportLoadingOverlay.classList.remove('show'); }, 400);
     }
   });
 
   window.addEventListener('load', initialize);
 
 </script>
-
-<div id="loading-overlay">
-  <div id="loading-box">
-    <p>查询历史数据中…</p>
-    <div id="loading-bar-track"><div id="loading-bar-fill"></div></div>
-  </div>
-</div>
 
 </body>
 </html>
